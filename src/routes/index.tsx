@@ -390,7 +390,7 @@ function Index() {
             </div>
             <div className="space-y-2">
               {persisted.labels.map((label) => {
-                const style = LABEL_STYLES[label.color] ?? LABEL_STYLES.brand!;
+                const style = LABEL_STYLES[label.color] ?? LABEL_STYLES["brand"]!;
                 return (
                   <button
                     key={label.id}
@@ -582,7 +582,7 @@ function MessageRow({
           {assignedLabels.map((labelId) => {
             const label = labels.find((l) => l.id === labelId);
             if (!label) return null;
-            const style = LABEL_STYLES[label.color] ?? LABEL_STYLES.brand!;
+            const style = LABEL_STYLES[label.color] ?? LABEL_STYLES["brand"]!;
             return (
               <span
                 key={labelId}
@@ -622,7 +622,7 @@ function MessageRow({
       {pickerOpen && (
         <div className="absolute right-0 top-9 z-20 w-44 rounded-lg bg-white p-1.5 shadow-lg ring-1 ring-black/10">
           {labels.map((label) => {
-            const style = LABEL_STYLES[label.color] ?? LABEL_STYLES.brand!;
+            const style = LABEL_STYLES[label.color] ?? LABEL_STYLES["brand"]!;
             const active = assignedLabels.includes(label.id);
             return (
               <button
