@@ -41,7 +41,7 @@ interface Todo {
   id: string;
   text: string;
   done: boolean;
-  messageId?: string;
+  messageId?: string | undefined;
   createdAt: number;
 }
 
