@@ -16,9 +16,14 @@ function toTimestamp(
   time: string,
   meridiem?: string,
 ): number {
-  const [m, d, y] = date.split("/").map(Number);
-  const year = y < 100 ? 2000 + y : y;
-  let [hh, mm] = time.split(":").map(Number);
+  const dparts = date.split("/").map(Number);
+  const m = dparts[0] ?? 1;
+  const d = dparts[1] ?? 1;
+  const yRaw = dparts[2] ?? 2000;
+  const year = yRaw < 100 ? 2000 + yRaw : yRaw;
+  const tparts = time.split(":").map(Number);
+  let hh = tparts[0] ?? 0;
+  const mm = tparts[1] ?? 0;
   if (meridiem) {
     const up = meridiem.toUpperCase();
     if (up === "PM" && hh !== 12) hh += 12;
@@ -35,7 +40,10 @@ export function parseWhatsAppExport(raw: string): ChatMessage[] {
   for (const line of lines) {
     const match = line.match(LINE_RE);
     if (match) {
-      const [, date, time, meridiem, rest] = match;
+      const date = match[1] ?? "";
+      const time = match[2] ?? "";
+      const meridiem = match[3];
+      const rest = match[4] ?? "";
       const sep = rest.indexOf(": ");
       let sender: string | null = null;
       let text = rest;
@@ -56,23 +64,27 @@ export function parseWhatsAppExport(raw: string): ChatMessage[] {
       });
     } else if (messages.length > 0 && line.trim()) {
       // continuation of the previous message
-      messages[messages.length - 1].text += "\n" + line;
+      const last = messages[messages.length - 1];
+      if (last) last.text += "\n" + line;
     }
   }
   return messages;
 }
 
-export function groupByDate(messages: ChatMessage[]): Map<string, ChatMessage[]> {
+export function groupByDate(
+  messages: ChatMessage[],
+): Map<string, ChatMessage[]> {
   const groups = new Map<string, ChatMessage[]>();
   for (const msg of messages) {
     const key = msg.date;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(msg);
+    const existing = groups.get(key);
+    if (existing) existing.push(msg);
+    else groups.set(key, [msg]);
   }
   return groups;
 }
 
-export function formatGroupDate(date: string, timestamp: number): string {
+export function formatGroupDate(timestamp: number): string {
   const d = new Date(timestamp);
   const today = new Date();
   const yesterday = new Date();
@@ -91,17 +103,32 @@ export function formatGroupDate(date: string, timestamp: number): string {
   return `${weekday} ${pretty}`;
 }
 
-const AVATAR_COLORS = ["#f0d3a3", "#cfe0e6", "#d9d4bd", "#cdd8e3", "#e6cfcf", "#d3e0cf"];
+const AVATAR_COLORS = [
+  "#f0d3a3",
+  "#cfe0e6",
+  "#d9d4bd",
+  "#cdd8e3",
+  "#e6cfcf",
+  "#d3e0cf",
+];
 
 export function avatarColor(sender: string): string {
   let hash = 0;
-  for (let i = 0; i < sender.length; i++) hash = (hash * 31 + sender.charCodeAt(i)) | 0;
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+  for (let i = 0; i < sender.length; i++)
+    hash = (hash * 31 + sender.charCodeAt(i)) | 0;
+  const idx = Math.abs(hash) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[idx] ?? AVATAR_COLORS[0]!;
 }
 
 export function initials(sender: string): string {
-  const words = sender.replace(/[^\p{L}\p{N} ]/gu, " ").trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return "?";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return (words[0][0] + words[1][0]).toUpperCase();
+  const words = sender
+    .replace(/[^\p{L}\p{N} ]/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const first = words[0];
+  if (!first) return "?";
+  const second = words[1];
+  if (!second) return first.slice(0, 2).toUpperCase();
+  return ((first[0] ?? "") + (second[0] ?? "")).toUpperCase();
 }
